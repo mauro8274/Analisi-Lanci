@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Roulette Analisi Avanzata - Multi-Verso</title>
+    <style>
+        body { background: #004d26; color: white; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
+        /* CONTROLLI */
+        .controls { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid gold; text-align: center; }
+        select { padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .status-info { margin-top: 10px; font-weight: bold; color: #ffeb3b; }
+
+        /* TAVOLO */
+        .tavolo { display: grid; grid-template-columns: 60px repeat(12, 45px); grid-template-rows: repeat(3, 40px); gap: 1px; background: #fff; border: 2px solid gold; }
+        .cell { background: #006633; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; border: 1px solid #005522; }
+        .zero-main { grid-row: 1 / span 3; background: #28a745; border-right: 2px solid white; }
+        .red { background: #e61919; } .black { background: #1a1a1a; }
+        .cell:hover { background: #bc9a5b; color: black; }
+
+        #history { width: 750px; height: 35px; background: #000; margin: 15px 0; display: flex; align-items: center; padding: 0 10px; color: gold; border: 1px solid #bc9a5b; font-size: 14px; }
+
+        /* RACETRACK */
+        .racetrack { 
+            display: grid; 
+            grid-template-columns: 50px repeat(15, 50px) 50px; 
+            grid-template-rows: repeat(6, 45px); 
+            gap: 2px; background: #111; padding: 15px; border: 4px solid #444;
+        }
+        .slot { border: 1px solid #555; display: flex; flex-direction: column; background: #222; }
+        .val { height: 22px; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
+        .num { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; color: #fff; }
+        .slot-zero { grid-row: span 2; }
+        .slot-zero .val { height: 44px; }
+
+        /* HEATMAP */
+        .h0 { background-color: #ffffff !important; }
+        .h1 { background-color: #ffcccc !important; }
+        .h2 { background-color: #ff6666 !important; }
+        .h3 { background-color: #ff0000 !important; color: #fff !important; }
+        .predicted { outline: 3px solid #00ff00; z-index: 10; box-shadow: 0 0 15px #00ff00; }
+
+        button { margin-top: 20px; padding: 10px 30px; cursor: pointer; background: #bc9a5b; font-weight: bold; border: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <label>MODALITÀ ROULETTE: </label>
+        <select id="mode-select" onchange="reset()">
+            <option value="ccw">1) Solo Antiorario (Standard)</option>
+            <option value="cw">2) Solo Orario</option>
+            <option value="alt">3) Alternata (Orario/Antiorario)</option>
+        </select>
+        <div id="next-launch" class="status-info">In attesa del primo lancio...</div>
+    </div>
+
+    <div class="tavolo" id="tavolo">
+        <div class="cell zero-main" onclick="addNum(0)">0</div>
+    </div>
+
+    <div id="history">Storico: </div>
+
+    <div class="racetrack" id="ruota"></div>
+
+    <button onclick="reset()">RESET SISTEMA</button>
+
+<script>
+    const wheel = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+    const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+    
+    let history = []; 
+    // Memorie distanze separate
+    let distCW = [];  // Orarie
+    let distCCW = []; // Antiorarie
+
+    // Inizializza Tavolo
+    const tav = document.getElementById('tavolo');
+    for(let c=1; c<=12; c++) {
+        for(let r=3; r>=1; r--) {
+            let n = (c-1)*3 + r;
+            let d = document.createElement('div');
+            d.className = `cell ${reds.includes(n)?'red':'black'}`;
+            d.style.gridColumn = c + 1;
+            d.style.gridRow = 4 - r;
+            d.innerText = n;
+            d.onclick = () => addNum(n);
+            tav.appendChild(d);
+        }
+    }
+
+    function buildWheel() {
+        const ruotaDiv = document.getElementById('ruota');
+        ruotaDiv.innerHTML = '';
+        const path = [
+            {n: 5, r: 1, c: 2}, {n: 24, r: 1, c: 3}, {n: 16, r: 1, c: 4}, {n: 33, r: 1, c: 5}, {n: 1, r: 1, c: 6}, 
+            {n: 20, r: 1, c: 7}, {n: 14, r: 1, c: 8}, {n: 31, r: 1, c: 9}, {n: 9, r: 1, c: 10}, {n: 22, r: 1, c: 11}, 
+            {n: 18, r: 1, c: 12}, {n: 29, r: 1, c: 13}, {n: 7, r: 1, c: 14}, {n: 28, r: 1, c: 15}, {n: 12, r: 1, c: 16},
+            {n: 35, r: 2, c: 17}, {n: 3, r: 3, c: 17}, {n: 26, r: 4, c: 17}, {n: 0, r: 5, c: 17, special: 'zero'},
+            {n: 32, r: 6, c: 16}, {n: 15, r: 6, c: 15}, {n: 19, r: 6, c: 14}, {n: 4, r: 6, c: 13}, {n: 21, r: 6, c: 12}, 
+            {n: 2, r: 6, c: 11}, {n: 25, r: 6, c: 10}, {n: 17, r: 6, c: 9}, {n: 34, r: 6, c: 8}, {n: 6, r: 6, c: 7}, 
+            {n: 27, r: 6, c: 6}, {n: 13, r: 6, c: 5}, {n: 36, r: 6, c: 4}, {n: 11, r: 6, c: 3}, {n: 30, r: 6, c: 2},
+            {n: 8, r: 5, c: 1}, {n: 23, r: 4, c: 1}, {n: 10, r: 3, c: 1}
+        ];
+
+        path.forEach(item => {
+            let s = document.createElement('div');
+            s.className = 'slot' + (item.special === 'zero' ? ' slot-zero' : '');
+            s.id = `s-${item.n}`;
+            s.style.gridRow = `${item.r} / span ${item.special === 'zero' ? 2 : 1}`;
+            s.style.gridColumn = item.c;
+            s.innerHTML = `<div class="val h0" id="v-${item.n}">0</div>
+                           <div class="num" style="background:${item.n===0?'#28a745':reds.includes(item.n)?'#e61919':'#1a1a1a'}">${item.n}</div>`;
+            ruotaDiv.appendChild(s);
+        });
+    }
+
+    function addNum(n) {
+        const mode = document.getElementById('mode-select').value;
+        const lastBall = history.length > 0 ? history[history.length - 1] : null;
+
+        if (lastBall !== null) {
+            let idxPrev = wheel.indexOf(lastBall);
+            let idxCurr = wheel.indexOf(n);
+            
+            // Calcolo Distanza Oraria (CW) e Antioraria (CCW)
+            let distCW = (idxCurr - idxPrev + 37) % 37;
+            let distCCW = (idxPrev - idxCurr + 37) % 37;
+
+            if (mode === 'ccw') {
+                saveDist(distCCW, 'ccw');
+            } else if (mode === 'cw') {
+                saveDist(distCW, 'cw');
+            } else {
+                // Modalità Alternata: determina il verso dell'ultimo lancio effettuato
+                // Se lo storico ha lunghezza dispari, l'ultimo è stato il 1°, 3°, 5°... (Orario)
+                // Usiamo lunghezza dello storico per determinare il verso del lancio APPENA AVVENUTO
+                if (history.length % 2 !== 0) {
+                    saveDist(distCW, 'cw'); // Lancio dispari = Orario
+                } else {
+                    saveDist(distCCW, 'ccw'); // Lancio pari = Antiorario
+                }
+            }
+        }
+
+        history.push(n);
+        if (history.length > 20) history.shift();
+        updateUI();
+    }
+
+    function saveDist(d, type) {
+        if (type === 'cw') {
+            distCW.push(d);
+            if (distCW.length > 10) distCW.shift();
+        } else {
+            distCCW.push(d);
+            if (distCCW.length > 10) distCCW.shift();
+        }
+    }
+
+    function updateUI() {
+        const mode = document.getElementById('mode-select').value;
+        const status = document.getElementById('next-launch');
+        document.getElementById('history').innerText = "Storico: " + history.join(" - ");
+
+        // Reset Grafico
+        wheel.forEach(num => {
+            let v = document.getElementById(`v-${num}`);
+            if(v) { v.innerText = "0"; v.className = "val h0"; document.getElementById(`s-${num}`).classList.remove('predicted'); }
+        });
+
+        if (history.length < 1) return;
+
+        let lastNum = history[history.length - 1];
+        let lastIdx = wheel.indexOf(lastNum);
+        let currentDistances = [];
+        let isNextCW = true;
+
+        // Determina quali distanze mostrare e il verso del PROSSIMO lancio
+        if (mode === 'ccw') {
+            currentDistances = distCCW;
+            isNextCW = false;
+            status.innerText = "PROSSIMO LANCIO: ANTIORARIO (Usa memoria CCW)";
+        } else if (mode === 'cw') {
+            currentDistances = distCW;
+            isNextCW = true;
+            status.innerText = "PROSSIMO LANCIO: ORARIO (Usa memoria CW)";
+        } else {
+            // Alternata: se abbiamo appena inserito il 1° lancio (len 1), il prossimo è il 2° (Antiorario)
+            if (history.length % 2 !== 0) {
+                currentDistances = distCCW;
+                isNextCW = false;
+                status.innerText = "PROSSIMO LANCIO: ANTIORARIO (Usa memoria CCW)";
+            } else {
+                currentDistances = distCW;
+                isNextCW = true;
+                status.innerText = "PROSSIMO LANCIO: ORARIO (Usa memoria CW)";
+            }
+        }
+
+        // Calcola e illumina
+        currentDistances.forEach(d => {
+            let targetIdx;
+            if (isNextCW) {
+                targetIdx = (lastIdx + d) % 37; // Proiezione Oraria
+            } else {
+                targetIdx = (lastIdx - d + 37) % 37; // Proiezione Antioraria
+            }
+            
+            let targetNum = wheel[targetIdx];
+            let vField = document.getElementById(`v-${targetNum}`);
+            if (vField) {
+                let count = parseInt(vField.innerText) + 1;
+                vField.innerText = count;
+                vField.className = "val " + (count===1?'h1':count===2?'h2':'h3');
+                document.getElementById(`s-${targetNum}`).classList.add('predicted');
+            }
+        });
+    }
+
+    function reset() {
+        history = []; distCW = []; distCCW = [];
+        document.getElementById('next-launch').innerText = "In attesa del primo lancio...";
+        updateUI();
+    }
+
+    buildWheel();
+</script>
+</body>
+</html>
