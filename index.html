@@ -2,57 +2,56 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Roulette Analisi Avanzata - Multi-Verso</title>
+    <title>Roulette Pro - Session Save</title>
     <style>
-        body { background: #004d26; color: white; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        body { background: #004d26; color: white; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
         
         /* CONTROLLI */
-        .controls { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid gold; text-align: center; }
-        select { padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-        .status-info { margin-top: 10px; font-weight: bold; color: #ffeb3b; }
+        .controls { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid gold; text-align: center; width: 95%; max-width: 800px; }
+        select { padding: 8px; font-weight: bold; border-radius: 4px; background: #eee; }
+        .status-info { margin-top: 5px; font-size: 13px; color: #ffeb3b; text-transform: uppercase; }
 
-        /* TAVOLO */
-        .tavolo { display: grid; grid-template-columns: 60px repeat(12, 45px); grid-template-rows: repeat(3, 40px); gap: 1px; background: #fff; border: 2px solid gold; }
-        .cell { background: #006633; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; border: 1px solid #005522; }
-        .zero-main { grid-row: 1 / span 3; background: #28a745; border-right: 2px solid white; }
+        /* TAVOLO (Ridimensionato per Mobile) */
+        .tavolo { display: grid; grid-template-columns: 45px repeat(12, 35px); grid-template-rows: repeat(3, 35px); gap: 1px; background: #fff; border: 1px solid gold; }
+        .cell { background: #006633; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; border: 1px solid #005522; font-size: 14px; }
+        .zero-main { grid-row: 1 / span 3; background: #28a745; }
         .red { background: #e61919; } .black { background: #1a1a1a; }
-        .cell:hover { background: #bc9a5b; color: black; }
 
-        #history { width: 750px; height: 35px; background: #000; margin: 15px 0; display: flex; align-items: center; padding: 0 10px; color: gold; border: 1px solid #bc9a5b; font-size: 14px; }
+        #history { width: 95%; max-width: 800px; min-height: 30px; background: #000; margin: 10px 0; display: flex; align-items: center; padding: 5px 10px; color: gold; border: 1px solid #bc9a5b; font-size: 12px; word-break: break-all; }
 
         /* RACETRACK */
         .racetrack { 
             display: grid; 
-            grid-template-columns: 50px repeat(15, 50px) 50px; 
-            grid-template-rows: repeat(6, 45px); 
-            gap: 2px; background: #111; padding: 15px; border: 4px solid #444;
+            grid-template-columns: 40px repeat(15, 40px) 40px; 
+            grid-template-rows: repeat(6, 40px); 
+            gap: 1px; background: #111; padding: 5px; border: 2px solid #444;
+            transform: scale(0.9); /* Aiuta la visualizzazione su schermi piccoli */
         }
         .slot { border: 1px solid #555; display: flex; flex-direction: column; background: #222; }
-        .val { height: 22px; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
-        .num { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; color: #fff; }
+        .val { height: 18px; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
+        .num { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #fff; }
         .slot-zero { grid-row: span 2; }
-        .slot-zero .val { height: 44px; }
+        .slot-zero .val { height: 36px; }
 
         /* HEATMAP */
         .h0 { background-color: #ffffff !important; }
         .h1 { background-color: #ffcccc !important; }
         .h2 { background-color: #ff6666 !important; }
         .h3 { background-color: #ff0000 !important; color: #fff !important; }
-        .predicted { outline: 3px solid #00ff00; z-index: 10; box-shadow: 0 0 15px #00ff00; }
+        .predicted { outline: 2px solid #00ff00; z-index: 10; box-shadow: 0 0 10px #00ff00; }
 
-        button { margin-top: 20px; padding: 10px 30px; cursor: pointer; background: #bc9a5b; font-weight: bold; border: none; border-radius: 4px; }
+        .btn-reset { margin-top: 10px; padding: 10px 20px; background: #bc9a5b; border: none; font-weight: bold; border-radius: 4px; color: black; }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <label>MODALITÀ ROULETTE: </label>
-        <select id="mode-select" onchange="reset()">
-            <option value="ccw">1) Solo Antiorario (Standard)</option>
+        <select id="mode-select" onchange="changeMode()">
+            <option value="ccw">1) Solo Antiorario</option>
             <option value="cw">2) Solo Orario</option>
             <option value="alt">3) Alternata (Orario/Antiorario)</option>
         </select>
-        <div id="next-launch" class="status-info">In attesa del primo lancio...</div>
+        <div id="next-launch" class="status-info">In attesa...</div>
     </div>
 
     <div class="tavolo" id="tavolo">
@@ -63,16 +62,38 @@
 
     <div class="racetrack" id="ruota"></div>
 
-    <button onclick="reset()">RESET SISTEMA</button>
+    <button class="btn-reset" onclick="reset()">RESET TOTALE (Pulisce Memoria)</button>
 
 <script>
     const wheel = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
     const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
     
     let history = []; 
-    // Memorie distanze separate
-    let distCW = [];  // Orarie
-    let distCCW = []; // Antiorarie
+    let distCW = [];  
+    let distCCW = []; 
+
+    // --- LOGICA DI SALVATAGGIO ---
+    function saveToStorage() {
+        const data = {
+            history: history,
+            distCW: distCW,
+            distCCW: distCCW,
+            mode: document.getElementById('mode-select').value
+        };
+        localStorage.setItem('rouletteData', JSON.stringify(data));
+    }
+
+    function loadFromStorage() {
+        const saved = localStorage.getItem('rouletteData');
+        if (saved) {
+            const data = JSON.parse(saved);
+            history = data.history || [];
+            distCW = data.distCW || [];
+            distCCW = data.distCCW || [];
+            document.getElementById('mode-select').value = data.mode || 'ccw';
+            updateUI();
+        }
+    }
 
     // Inizializza Tavolo
     const tav = document.getElementById('tavolo');
@@ -122,29 +143,20 @@
         if (lastBall !== null) {
             let idxPrev = wheel.indexOf(lastBall);
             let idxCurr = wheel.indexOf(n);
-            
-            // Calcolo Distanza Oraria (CW) e Antioraria (CCW)
-            let distCW = (idxCurr - idxPrev + 37) % 37;
-            let distCCW = (idxPrev - idxCurr + 37) % 37;
+            let dCW = (idxCurr - idxPrev + 37) % 37;
+            let dCCW = (idxPrev - idxCurr + 37) % 37;
 
-            if (mode === 'ccw') {
-                saveDist(distCCW, 'ccw');
-            } else if (mode === 'cw') {
-                saveDist(distCW, 'cw');
-            } else {
-                // Modalità Alternata: determina il verso dell'ultimo lancio effettuato
-                // Se lo storico ha lunghezza dispari, l'ultimo è stato il 1°, 3°, 5°... (Orario)
-                // Usiamo lunghezza dello storico per determinare il verso del lancio APPENA AVVENUTO
-                if (history.length % 2 !== 0) {
-                    saveDist(distCW, 'cw'); // Lancio dispari = Orario
-                } else {
-                    saveDist(distCCW, 'ccw'); // Lancio pari = Antiorario
-                }
+            if (mode === 'ccw') { saveDist(dCCW, 'ccw'); } 
+            else if (mode === 'cw') { saveDist(dCW, 'cw'); } 
+            else {
+                if (history.length % 2 !== 0) { saveDist(dCW, 'cw'); } 
+                else { saveDist(dCCW, 'ccw'); }
             }
         }
-
         history.push(n);
         if (history.length > 20) history.shift();
+        
+        saveToStorage(); // Salva dopo ogni inserimento
         updateUI();
     }
 
@@ -163,50 +175,30 @@
         const status = document.getElementById('next-launch');
         document.getElementById('history').innerText = "Storico: " + history.join(" - ");
 
-        // Reset Grafico
         wheel.forEach(num => {
             let v = document.getElementById(`v-${num}`);
             if(v) { v.innerText = "0"; v.className = "val h0"; document.getElementById(`s-${num}`).classList.remove('predicted'); }
         });
 
-        if (history.length < 1) return;
+        if (history.length < 1) {
+            status.innerText = "In attesa...";
+            return;
+        }
 
         let lastNum = history[history.length - 1];
         let lastIdx = wheel.indexOf(lastNum);
-        let currentDistances = [];
-        let isNextCW = true;
+        let currentDists = [];
+        let nextIsCW = true;
 
-        // Determina quali distanze mostrare e il verso del PROSSIMO lancio
-        if (mode === 'ccw') {
-            currentDistances = distCCW;
-            isNextCW = false;
-            status.innerText = "PROSSIMO LANCIO: ANTIORARIO (Usa memoria CCW)";
-        } else if (mode === 'cw') {
-            currentDistances = distCW;
-            isNextCW = true;
-            status.innerText = "PROSSIMO LANCIO: ORARIO (Usa memoria CW)";
-        } else {
-            // Alternata: se abbiamo appena inserito il 1° lancio (len 1), il prossimo è il 2° (Antiorario)
-            if (history.length % 2 !== 0) {
-                currentDistances = distCCW;
-                isNextCW = false;
-                status.innerText = "PROSSIMO LANCIO: ANTIORARIO (Usa memoria CCW)";
-            } else {
-                currentDistances = distCW;
-                isNextCW = true;
-                status.innerText = "PROSSIMO LANCIO: ORARIO (Usa memoria CW)";
-            }
+        if (mode === 'ccw') { currentDists = distCCW; nextIsCW = false; status.innerText = "PROSSIMO: ANTIORARIO"; } 
+        else if (mode === 'cw') { currentDists = distCW; nextIsCW = true; status.innerText = "PROSSIMO: ORARIO"; } 
+        else {
+            if (history.length % 2 !== 0) { currentDists = distCCW; nextIsCW = false; status.innerText = "PROSSIMO: ANTIORARIO"; } 
+            else { currentDists = distCW; nextIsCW = true; status.innerText = "PROSSIMO: ORARIO"; }
         }
 
-        // Calcola e illumina
-        currentDistances.forEach(d => {
-            let targetIdx;
-            if (isNextCW) {
-                targetIdx = (lastIdx + d) % 37; // Proiezione Oraria
-            } else {
-                targetIdx = (lastIdx - d + 37) % 37; // Proiezione Antioraria
-            }
-            
+        currentDists.forEach(d => {
+            let targetIdx = nextIsCW ? (lastIdx + d) % 37 : (lastIdx - d + 37) % 37;
             let targetNum = wheel[targetIdx];
             let vField = document.getElementById(`v-${targetNum}`);
             if (vField) {
@@ -218,13 +210,21 @@
         });
     }
 
-    function reset() {
-        history = []; distCW = []; distCCW = [];
-        document.getElementById('next-launch').innerText = "In attesa del primo lancio...";
+    function changeMode() {
+        saveToStorage();
         updateUI();
     }
 
+    function reset() {
+        if(confirm("Vuoi cancellare tutto lo storico?")) {
+            localStorage.removeItem('rouletteData');
+            history = []; distCW = []; distCCW = [];
+            updateUI();
+        }
+    }
+
     buildWheel();
+    loadFromStorage(); // Carica i dati all'apertura
 </script>
 </body>
 </html>
