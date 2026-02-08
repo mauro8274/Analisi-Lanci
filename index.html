@@ -2,30 +2,26 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Roulette Pro - Session Save</title>
+    <title>Roulette Pro - Logica 20 Lanci</title>
     <style>
         body { background: #004d26; color: white; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
         
-        /* CONTROLLI */
         .controls { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid gold; text-align: center; width: 95%; max-width: 800px; }
-        select { padding: 8px; font-weight: bold; border-radius: 4px; background: #eee; }
-        .status-info { margin-top: 5px; font-size: 13px; color: #ffeb3b; text-transform: uppercase; }
+        select { padding: 8px; font-weight: bold; border-radius: 4px; }
+        .status-info { margin-top: 5px; font-size: 14px; color: #ffeb3b; font-weight: bold; }
 
-        /* TAVOLO (Ridimensionato per Mobile) */
         .tavolo { display: grid; grid-template-columns: 45px repeat(12, 35px); grid-template-rows: repeat(3, 35px); gap: 1px; background: #fff; border: 1px solid gold; }
         .cell { background: #006633; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; border: 1px solid #005522; font-size: 14px; }
         .zero-main { grid-row: 1 / span 3; background: #28a745; }
         .red { background: #e61919; } .black { background: #1a1a1a; }
 
-        #history { width: 95%; max-width: 800px; min-height: 30px; background: #000; margin: 10px 0; display: flex; align-items: center; padding: 5px 10px; color: gold; border: 1px solid #bc9a5b; font-size: 12px; word-break: break-all; }
+        #history { width: 95%; max-width: 800px; min-height: 30px; background: #000; margin: 10px 0; display: flex; align-items: center; padding: 5px 10px; color: gold; border: 1px solid #bc9a5b; font-size: 12px; }
 
-        /* RACETRACK */
         .racetrack { 
             display: grid; 
             grid-template-columns: 40px repeat(15, 40px) 40px; 
             grid-template-rows: repeat(6, 40px); 
-            gap: 1px; background: #111; padding: 5px; border: 2px solid #444;
-            transform: scale(0.9); /* Aiuta la visualizzazione su schermi piccoli */
+            gap: 1px; background: #111; padding: 15px; border: 2px solid #444;
         }
         .slot { border: 1px solid #555; display: flex; flex-direction: column; background: #222; }
         .val { height: 18px; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
@@ -33,20 +29,18 @@
         .slot-zero { grid-row: span 2; }
         .slot-zero .val { height: 36px; }
 
-        /* HEATMAP */
         .h0 { background-color: #ffffff !important; }
         .h1 { background-color: #ffcccc !important; }
         .h2 { background-color: #ff6666 !important; }
         .h3 { background-color: #ff0000 !important; color: #fff !important; }
         .predicted { outline: 2px solid #00ff00; z-index: 10; box-shadow: 0 0 10px #00ff00; }
-
-        .btn-reset { margin-top: 10px; padding: 10px 20px; background: #bc9a5b; border: none; font-weight: bold; border-radius: 4px; color: black; }
+        .btn-reset { margin-top: 10px; padding: 10px 20px; background: #bc9a5b; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <select id="mode-select" onchange="changeMode()">
+        <select id="mode-select" onchange="reset()">
             <option value="ccw">1) Solo Antiorario</option>
             <option value="cw">2) Solo Orario</option>
             <option value="alt">3) Alternata (Orario/Antiorario)</option>
@@ -59,10 +53,8 @@
     </div>
 
     <div id="history">Storico: </div>
-
     <div class="racetrack" id="ruota"></div>
-
-    <button class="btn-reset" onclick="reset()">RESET TOTALE (Pulisce Memoria)</button>
+    <button class="btn-reset" onclick="reset()">RESET TOTALE</button>
 
 <script>
     const wheel = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
@@ -71,25 +63,25 @@
     let history = []; 
     let distCW = [];  
     let distCCW = []; 
+    let totalClicks = 0; // Contatore assoluto per non perdere l'alternanza
 
-    // --- LOGICA DI SALVATAGGIO ---
     function saveToStorage() {
         const data = {
-            history: history,
-            distCW: distCW,
-            distCCW: distCCW,
-            mode: document.getElementById('mode-select').value
+            history: history, distCW: distCW, distCCW: distCCW,
+            mode: document.getElementById('mode-select').value,
+            totalClicks: totalClicks
         };
-        localStorage.setItem('rouletteData', JSON.stringify(data));
+        localStorage.setItem('rouletteSession', JSON.stringify(data));
     }
 
     function loadFromStorage() {
-        const saved = localStorage.getItem('rouletteData');
+        const saved = localStorage.getItem('rouletteSession');
         if (saved) {
             const data = JSON.parse(saved);
             history = data.history || [];
             distCW = data.distCW || [];
             distCCW = data.distCCW || [];
+            totalClicks = data.totalClicks || 0;
             document.getElementById('mode-select').value = data.mode || 'ccw';
             updateUI();
         }
@@ -123,7 +115,6 @@
             {n: 27, r: 6, c: 6}, {n: 13, r: 6, c: 5}, {n: 36, r: 6, c: 4}, {n: 11, r: 6, c: 3}, {n: 30, r: 6, c: 2},
             {n: 8, r: 5, c: 1}, {n: 23, r: 4, c: 1}, {n: 10, r: 3, c: 1}
         ];
-
         path.forEach(item => {
             let s = document.createElement('div');
             s.className = 'slot' + (item.special === 'zero' ? ' slot-zero' : '');
@@ -146,17 +137,30 @@
             let dCW = (idxCurr - idxPrev + 37) % 37;
             let dCCW = (idxPrev - idxCurr + 37) % 37;
 
-            if (mode === 'ccw') { saveDist(dCCW, 'ccw'); } 
-            else if (mode === 'cw') { saveDist(dCW, 'cw'); } 
-            else {
-                if (history.length % 2 !== 0) { saveDist(dCW, 'cw'); } 
-                else { saveDist(dCCW, 'ccw'); }
+            // Logica Verso basata sul click totale per non sbagliare mai sequenza
+            if (mode === 'ccw') {
+                saveDist(dCCW, 'ccw');
+            } else if (mode === 'cw') {
+                saveDist(dCW, 'cw');
+            } else {
+                // Alternanza: Lancio 1->2 (Click 1) è Orario, 2->3 (Click 2) è Antiorario
+                if (totalClicks % 2 !== 0) {
+                    saveDist(dCCW, 'ccw'); // Lancio pari
+                } else {
+                    saveDist(dCW, 'cw'); // Lancio dispari
+                }
             }
         }
-        history.push(n);
-        if (history.length > 20) history.shift();
         
-        saveToStorage(); // Salva dopo ogni inserimento
+        history.push(n);
+        totalClicks++; 
+        
+        // Mantiene solo gli ultimi 20 lanci
+        if (history.length > 20) {
+            history.shift();
+        }
+
+        saveToStorage();
         updateUI();
     }
 
@@ -173,28 +177,38 @@
     function updateUI() {
         const mode = document.getElementById('mode-select').value;
         const status = document.getElementById('next-launch');
-        document.getElementById('history').innerText = "Storico: " + history.join(" - ");
+        document.getElementById('history').innerText = "Storico (" + history.length + "/20): " + history.join(" - ");
 
+        // Reset Grafico
         wheel.forEach(num => {
             let v = document.getElementById(`v-${num}`);
             if(v) { v.innerText = "0"; v.className = "val h0"; document.getElementById(`s-${num}`).classList.remove('predicted'); }
         });
 
-        if (history.length < 1) {
-            status.innerText = "In attesa...";
-            return;
-        }
+        if (history.length < 1) return;
 
         let lastNum = history[history.length - 1];
         let lastIdx = wheel.indexOf(lastNum);
         let currentDists = [];
         let nextIsCW = true;
 
-        if (mode === 'ccw') { currentDists = distCCW; nextIsCW = false; status.innerText = "PROSSIMO: ANTIORARIO"; } 
-        else if (mode === 'cw') { currentDists = distCW; nextIsCW = true; status.innerText = "PROSSIMO: ORARIO"; } 
-        else {
-            if (history.length % 2 !== 0) { currentDists = distCCW; nextIsCW = false; status.innerText = "PROSSIMO: ANTIORARIO"; } 
-            else { currentDists = distCW; nextIsCW = true; status.innerText = "PROSSIMO: ORARIO"; }
+        // Determina il verso del PROSSIMO lancio basandosi sui click totali
+        if (mode === 'ccw') {
+            currentDists = distCCW; nextIsCW = false;
+            status.innerText = "PROSSIMO: ANTIORARIO";
+        } else if (mode === 'cw') {
+            currentDists = distCW; nextIsCW = true;
+            status.innerText = "PROSSIMO: ORARIO";
+        } else {
+            // Se totalClicks è 1 (abbiamo messo il primo numero), il prossimo lancio è l'Alternata n.2 (Orario)
+            // Se totalClicks è 2, il prossimo è il n.3 (Antiorario) e così via.
+            if (totalClicks % 2 !== 0) {
+                currentDists = distCW; nextIsCW = true;
+                status.innerText = "PROSSIMO: ORARIO (Alternata)";
+            } else {
+                currentDists = distCCW; nextIsCW = false;
+                status.innerText = "PROSSIMO: ANTIORARIO (Alternata)";
+            }
         }
 
         currentDists.forEach(d => {
@@ -210,21 +224,16 @@
         });
     }
 
-    function changeMode() {
-        saveToStorage();
-        updateUI();
-    }
-
     function reset() {
-        if(confirm("Vuoi cancellare tutto lo storico?")) {
-            localStorage.removeItem('rouletteData');
-            history = []; distCW = []; distCCW = [];
+        if(confirm("Vuoi resettare la sessione?")) {
+            localStorage.removeItem('rouletteSession');
+            history = []; distCW = []; distCCW = []; totalClicks = 0;
             updateUI();
         }
     }
 
     buildWheel();
-    loadFromStorage(); // Carica i dati all'apertura
+    loadFromStorage();
 </script>
 </body>
 </html>
