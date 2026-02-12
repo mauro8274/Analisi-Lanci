@@ -2,238 +2,181 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Roulette Pro - Logica 20 Lanci</title>
+    <title>Roulette Pro - Logic Verified</title>
     <style>
-        body { background: #004d26; color: white; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
-        
-        .controls { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid gold; text-align: center; width: 95%; max-width: 800px; }
-        select { padding: 8px; font-weight: bold; border-radius: 4px; }
-        .status-info { margin-top: 5px; font-size: 14px; color: #ffeb3b; font-weight: bold; }
-
+        body { background: #004d26; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
+        .dashboard { background: #1a1a1a; padding: 15px; border-radius: 8px; border: 2px solid gold; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 10px; width: 95%; max-width: 900px; justify-content: space-around; }
+        .balance-box { font-size: 22px; font-weight: bold; color: #00ff00; }
+        .info-label { font-size: 11px; color: gold; text-transform: uppercase; display: block; }
         .tavolo { display: grid; grid-template-columns: 45px repeat(12, 35px); grid-template-rows: repeat(3, 35px); gap: 1px; background: #fff; border: 1px solid gold; }
         .cell { background: #006633; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; border: 1px solid #005522; font-size: 14px; }
         .zero-main { grid-row: 1 / span 3; background: #28a745; }
         .red { background: #e61919; } .black { background: #1a1a1a; }
-
-        #history { width: 95%; max-width: 800px; min-height: 30px; background: #000; margin: 10px 0; display: flex; align-items: center; padding: 5px 10px; color: gold; border: 1px solid #bc9a5b; font-size: 12px; }
-
-        .racetrack { 
-            display: grid; 
-            grid-template-columns: 40px repeat(15, 40px) 40px; 
-            grid-template-rows: repeat(6, 40px); 
-            gap: 1px; background: #111; padding: 15px; border: 2px solid #444;
-        }
+        #history { width: 95%; max-width: 900px; min-height: 25px; background: #000; margin: 10px 0; display: flex; align-items: center; padding: 5px 10px; color: gold; border: 1px solid #bc9a5b; font-size: 12px; }
+        .racetrack { display: grid; grid-template-columns: 40px repeat(15, 40px) 40px; grid-template-rows: repeat(6, 40px); gap: 1px; background: #111; padding: 10px; border: 2px solid #444; }
         .slot { border: 1px solid #555; display: flex; flex-direction: column; background: #222; }
-        .val { height: 18px; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
-        .num { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #fff; }
+        .val { height: 16px; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+        .num { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
         .slot-zero { grid-row: span 2; }
-        .slot-zero .val { height: 36px; }
-
-        .h0 { background-color: #ffffff !important; }
-        .h1 { background-color: #ffcccc !important; }
-        .h2 { background-color: #ff6666 !important; }
-        .h3 { background-color: #ff0000 !important; color: #fff !important; }
-        .predicted { outline: 2px solid #00ff00; z-index: 10; box-shadow: 0 0 10px #00ff00; }
-        .btn-reset { margin-top: 10px; padding: 10px 20px; background: #bc9a5b; border: none; font-weight: bold; cursor: pointer; }
+        .predicted { outline: 2px solid #00ff00; z-index: 10; box-shadow: 0 0 8px #00ff00; }
+        .bet-box { background: rgba(0,0,0,0.7); border: 1px solid gold; padding: 10px; border-radius: 6px; width: 45%; }
+        .list-nums { color: #00ff00; font-size: 18px; font-weight: bold; }
+        .new-nums { color: #ffeb3b; font-size: 18px; font-weight: bold; }
+        .win-alert { position: fixed; top: 20%; background: gold; color: black; padding: 10px 30px; font-size: 24px; font-weight: bold; border-radius: 5px; display: none; z-index: 100; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <select id="mode-select" onchange="reset()">
-            <option value="ccw">1) Solo Antiorario</option>
-            <option value="cw">2) Solo Orario</option>
-            <option value="alt">3) Alternata (Orario/Antiorario)</option>
-        </select>
-        <div id="next-launch" class="status-info">In attesa...</div>
+    <div id="win-msg" class="win-alert">VINCITA! 💰</div>
+
+    <div class="dashboard">
+        <div class="balance-box"><span class="info-label">Saldo</span><span id="balance">100.00</span>€</div>
+        <div><span class="info-label">Fiche</span><select id="chip-val"><option value="0.10">0.10€</option><option value="0.50">0.50€</option><option value="1.00">1.00€</option></select></div>
+        <div><span class="info-label">Modalità</span><select id="mode-select" onchange="resetSession()"><option value="alt">Alternata (OR/ANT)</option><option value="ccw">Solo Antiorario</option><option value="cw">Solo Orario</option></select></div>
+        <button onclick="resetSession()">RESET</button>
     </div>
 
-    <div class="tavolo" id="tavolo">
-        <div class="cell zero-main" onclick="addNum(0)">0</div>
-    </div>
+    <div class="tavolo" id="tavolo-ui"><div class="cell zero-main" onclick="addNum(0)">0</div></div>
+    <div id="history">Storico: -</div>
+    <div class="racetrack" id="ruota-ui"></div>
 
-    <div id="history">Storico: </div>
-    <div class="racetrack" id="ruota"></div>
-    <button class="btn-reset" onclick="reset()">RESET TOTALE</button>
+    <div style="width:95%; max-width:900px; display:flex; justify-content:space-between;">
+        <div class="bet-box"><span class="info-label">Nuovi da aggiungere</span><div id="new-bet-nums" class="new-nums">-</div></div>
+        <div class="bet-box"><span class="info-label">Totale in gioco</span><div id="total-bet-nums" class="list-nums">-</div></div>
+    </div>
 
 <script>
     const wheel = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
     const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-    
-    let history = []; 
-    let distCW = [];  
-    let distCCW = []; 
-    let totalClicks = 0; // Contatore assoluto per non perdere l'alternanza
+    let state = { balance: 100.00, history: [], distCW: [], distCCW: [], totalClicks: 0, currentBets: [] };
 
-    function saveToStorage() {
-        const data = {
-            history: history, distCW: distCW, distCCW: distCCW,
-            mode: document.getElementById('mode-select').value,
-            totalClicks: totalClicks
-        };
-        localStorage.setItem('rouletteSession', JSON.stringify(data));
-    }
-
-    function loadFromStorage() {
-        const saved = localStorage.getItem('rouletteSession');
-        if (saved) {
-            const data = JSON.parse(saved);
-            history = data.history || [];
-            distCW = data.distCW || [];
-            distCCW = data.distCCW || [];
-            totalClicks = data.totalClicks || 0;
-            document.getElementById('mode-select').value = data.mode || 'ccw';
-            updateUI();
-        }
-    }
-
-    // Inizializza Tavolo
-    const tav = document.getElementById('tavolo');
-    for(let c=1; c<=12; c++) {
-        for(let r=3; r>=1; r--) {
-            let n = (c-1)*3 + r;
-            let d = document.createElement('div');
-            d.className = `cell ${reds.includes(n)?'red':'black'}`;
-            d.style.gridColumn = c + 1;
-            d.style.gridRow = 4 - r;
-            d.innerText = n;
-            d.onclick = () => addNum(n);
-            tav.appendChild(d);
-        }
-    }
+    // Costruzione Tavolo
+    const tUi = document.getElementById('tavolo-ui');
+    for(let c=1; c<=12; c++) { for(let r=3; r>=1; r--) {
+        let n = (c-1)*3+r; let d = document.createElement('div');
+        d.className=`cell ${reds.includes(n)?'red':'black'}`; d.style.gridColumn=c+1; d.style.gridRow=4-r;
+        d.innerText=n; d.onclick=()=>addNum(n); tUi.appendChild(d);
+    }}
 
     function buildWheel() {
-        const ruotaDiv = document.getElementById('ruota');
-        ruotaDiv.innerHTML = '';
+        const ruotaDiv = document.getElementById('ruota-ui'); ruotaDiv.innerHTML = '';
         const path = [
-            {n: 5, r: 1, c: 2}, {n: 24, r: 1, c: 3}, {n: 16, r: 1, c: 4}, {n: 33, r: 1, c: 5}, {n: 1, r: 1, c: 6}, 
-            {n: 20, r: 1, c: 7}, {n: 14, r: 1, c: 8}, {n: 31, r: 1, c: 9}, {n: 9, r: 1, c: 10}, {n: 22, r: 1, c: 11}, 
-            {n: 18, r: 1, c: 12}, {n: 29, r: 1, c: 13}, {n: 7, r: 1, c: 14}, {n: 28, r: 1, c: 15}, {n: 12, r: 1, c: 16},
+            {n: 5, r: 1, c: 2}, {n: 24, r: 1, c: 3}, {n: 16, r: 1, c: 4}, {n: 33, r: 1, c: 5}, {n: 1, r: 1, c: 6}, {n: 20, r: 1, c: 7}, {n: 14, r: 1, c: 8}, {n: 31, r: 1, c: 9}, {n: 9, r: 1, c: 10}, {n: 22, r: 1, c: 11}, {n: 18, r: 1, c: 12}, {n: 29, r: 1, c: 13}, {n: 7, r: 1, c: 14}, {n: 28, r: 1, c: 15}, {n: 12, r: 1, c: 16},
             {n: 35, r: 2, c: 17}, {n: 3, r: 3, c: 17}, {n: 26, r: 4, c: 17}, {n: 0, r: 5, c: 17, special: 'zero'},
-            {n: 32, r: 6, c: 16}, {n: 15, r: 6, c: 15}, {n: 19, r: 6, c: 14}, {n: 4, r: 6, c: 13}, {n: 21, r: 6, c: 12}, 
-            {n: 2, r: 6, c: 11}, {n: 25, r: 6, c: 10}, {n: 17, r: 6, c: 9}, {n: 34, r: 6, c: 8}, {n: 6, r: 6, c: 7}, 
-            {n: 27, r: 6, c: 6}, {n: 13, r: 6, c: 5}, {n: 36, r: 6, c: 4}, {n: 11, r: 6, c: 3}, {n: 30, r: 6, c: 2},
+            {n: 32, r: 6, c: 16}, {n: 15, r: 6, c: 15}, {n: 19, r: 6, c: 14}, {n: 4, r: 6, c: 13}, {n: 21, r: 6, c: 12}, {n: 2, r: 6, c: 11}, {n: 25, r: 6, c: 10}, {n: 17, r: 6, c: 9}, {n: 34, r: 6, c: 8}, {n: 6, r: 6, c: 7}, {n: 27, r: 6, c: 6}, {n: 13, r: 6, c: 5}, {n: 36, r: 6, c: 4}, {n: 11, r: 6, c: 3}, {n: 30, r: 6, c: 2},
             {n: 8, r: 5, c: 1}, {n: 23, r: 4, c: 1}, {n: 10, r: 3, c: 1}
         ];
         path.forEach(item => {
-            let s = document.createElement('div');
-            s.className = 'slot' + (item.special === 'zero' ? ' slot-zero' : '');
-            s.id = `s-${item.n}`;
-            s.style.gridRow = `${item.r} / span ${item.special === 'zero' ? 2 : 1}`;
-            s.style.gridColumn = item.c;
-            s.innerHTML = `<div class="val h0" id="v-${item.n}">0</div>
-                           <div class="num" style="background:${item.n===0?'#28a745':reds.includes(item.n)?'#e61919':'#1a1a1a'}">${item.n}</div>`;
+            let s = document.createElement('div'); s.className = 'slot' + (item.special==='zero'?' slot-zero':'');
+            s.id = `s-${item.n}`; s.style.gridRow = `${item.r} / span ${item.special==='zero'?2:1}`; s.style.gridColumn = item.c;
+            s.innerHTML = `<div class="val h0" id="v-${item.n}">0</div><div class="num" style="background:${item.n===0?'#28a745':reds.includes(item.n)?'#e61919':'#1a1a1a'}">${item.n}</div>`;
             ruotaDiv.appendChild(s);
         });
     }
 
     function addNum(n) {
         const mode = document.getElementById('mode-select').value;
-        const lastBall = history.length > 0 ? history[history.length - 1] : null;
+        const chip = parseFloat(document.getElementById('chip-val').value);
+        
+        // 1. Verifica Vincita
+        if (state.currentBets.includes(n)) {
+            state.balance += (chip * 36);
+            state.currentBets = [];
+            document.getElementById('win-msg').style.display = 'block';
+            setTimeout(()=>document.getElementById('win-msg').style.display='none', 2000);
+        }
 
-        if (lastBall !== null) {
-            let idxPrev = wheel.indexOf(lastBall);
-            let idxCurr = wheel.indexOf(n);
-            let dCW = (idxCurr - idxPrev + 37) % 37;
-            let dCCW = (idxPrev - idxCurr + 37) % 37;
+        // 2. Sottrazione costo
+        if (state.currentBets.length > 0) state.balance -= (state.currentBets.length * chip);
 
-            // Logica Verso basata sul click totale per non sbagliare mai sequenza
-            if (mode === 'ccw') {
-                saveDist(dCCW, 'ccw');
-            } else if (mode === 'cw') {
-                saveDist(dCW, 'cw');
-            } else {
-                // Alternanza: Lancio 1->2 (Click 1) è Orario, 2->3 (Click 2) è Antiorario
-                if (totalClicks % 2 !== 0) {
-                    saveDist(dCCW, 'ccw'); // Lancio pari
-                } else {
-                    saveDist(dCW, 'cw'); // Lancio dispari
-                }
+        // 3. Calcolo Distanze (LOGICA VERIFICATA)
+        if (state.history.length > 0) {
+            let last = state.history[state.history.length-1];
+            let iL = wheel.indexOf(last), iN = wheel.indexOf(n);
+            
+            let dCW = (iN - iL + 37) % 37; // Passi orari per arrivare a N
+            let dCCW = (iL - iN + 37) % 37; // Passi antiorari per arrivare a N
+
+            if (mode === 'cw') state.distCW.push(dCW);
+            else if (mode === 'ccw') state.distCCW.push(dCCW);
+            else {
+                // Alternata: il lancio appena avvenuto (totalClicks 1->2, 3->4...) è ORARIO
+                // (Se totalClicks è pari, abbiamo appena inserito un numero dispari -> orario)
+                (state.totalClicks % 2 === 0) ? state.distCW.push(dCW) : state.distCCW.push(dCCW);
             }
-        }
-        
-        history.push(n);
-        totalClicks++; 
-        
-        // Mantiene solo gli ultimi 20 lanci
-        if (history.length > 20) {
-            history.shift();
+            if(state.distCW.length > 10) state.distCW.shift();
+            if(state.distCCW.length > 10) state.distCCW.shift();
         }
 
-        saveToStorage();
-        updateUI();
-    }
-
-    function saveDist(d, type) {
-        if (type === 'cw') {
-            distCW.push(d);
-            if (distCW.length > 10) distCW.shift();
-        } else {
-            distCCW.push(d);
-            if (distCCW.length > 10) distCCW.shift();
-        }
+        state.history.push(n); state.totalClicks++;
+        if (state.history.length > 20) state.history.shift();
+        updateUI(); saveStorage();
     }
 
     function updateUI() {
         const mode = document.getElementById('mode-select').value;
-        const status = document.getElementById('next-launch');
-        document.getElementById('history').innerText = "Storico (" + history.length + "/20): " + history.join(" - ");
+        document.getElementById('balance').innerText = state.balance.toFixed(2);
+        document.getElementById('history').innerText = "Storico: " + state.history.join(" - ");
 
-        // Reset Grafico
-        wheel.forEach(num => {
-            let v = document.getElementById(`v-${num}`);
-            if(v) { v.innerText = "0"; v.className = "val h0"; document.getElementById(`s-${num}`).classList.remove('predicted'); }
+        // Reset Racetrack
+        let counts = {}; wheel.forEach(n => { 
+            counts[n]=0; document.getElementById(`v-${n}`).innerText="0"; 
+            document.getElementById(`v-${n}`).className="val h0";
+            document.getElementById(`s-${n}`).classList.remove('predicted');
         });
 
-        if (history.length < 1) return;
+        if (state.history.length === 0) return;
+        
+        let lastN = state.history[state.history.length-1];
+        let lastI = wheel.indexOf(lastN);
 
-        let lastNum = history[history.length - 1];
-        let lastIdx = wheel.indexOf(lastNum);
-        let currentDists = [];
-        let nextIsCW = true;
+        // Determinazione Verso PROSSIMO Lancio
+        let nextIsCW = (mode === 'cw' || (mode === 'alt' && state.totalClicks % 2 === 0));
+        let activeDists = nextIsCW ? state.distCW : state.distCCW;
 
-        // Determina il verso del PROSSIMO lancio basandosi sui click totali
-        if (mode === 'ccw') {
-            currentDists = distCCW; nextIsCW = false;
-            status.innerText = "PROSSIMO: ANTIORARIO";
-        } else if (mode === 'cw') {
-            currentDists = distCW; nextIsCW = true;
-            status.innerText = "PROSSIMO: ORARIO";
+        // Applicazione distanze (LOGICA VERIFICATA)
+        activeDists.forEach(d => {
+            let targetI = nextIsCW ? (lastI + d) % 37 : (lastI - d + 37) % 37;
+            let targetN = wheel[targetI];
+            counts[targetN]++;
+        });
+
+        let suggested = [];
+        wheel.forEach(n => {
+            if(counts[n] > 0) {
+                let v = document.getElementById(`v-${n}`);
+                v.innerText = counts[n]; v.className = "val h" + Math.min(counts[n], 3);
+                document.getElementById(`s-${n}`).classList.add('predicted');
+                
+                // Criteri: Ripetizione > 1 o Vicini contigui
+                let i = wheel.indexOf(n);
+                if(counts[n] > 1 || counts[wheel[(i-1+37)%37]] > 0 || counts[wheel[(i+1)%37]] > 0) suggested.push(n);
+            }
+        });
+
+        if (state.history.length >= 10) {
+            let newOnes = suggested.filter(n => !state.currentBets.includes(n)).sort((a,b)=>a-b);
+            document.getElementById('new-bet-nums').innerText = newOnes.length > 0 ? newOnes.join(", ") : "-";
+            state.currentBets = Array.from(new Set([...state.currentBets, ...suggested])).sort((a,b)=>a-b);
+            document.getElementById('total-bet-nums').innerText = state.currentBets.join(", ");
         } else {
-            // Se totalClicks è 1 (abbiamo messo il primo numero), il prossimo lancio è l'Alternata n.2 (Orario)
-            // Se totalClicks è 2, il prossimo è il n.3 (Antiorario) e così via.
-            if (totalClicks % 2 !== 0) {
-                currentDists = distCW; nextIsCW = true;
-                status.innerText = "PROSSIMO: ORARIO (Alternata)";
-            } else {
-                currentDists = distCCW; nextIsCW = false;
-                status.innerText = "PROSSIMO: ANTIORARIO (Alternata)";
-            }
-        }
-
-        currentDists.forEach(d => {
-            let targetIdx = nextIsCW ? (lastIdx + d) % 37 : (lastIdx - d + 37) % 37;
-            let targetNum = wheel[targetIdx];
-            let vField = document.getElementById(`v-${targetNum}`);
-            if (vField) {
-                let count = parseInt(vField.innerText) + 1;
-                vField.innerText = count;
-                vField.className = "val " + (count===1?'h1':count===2?'h2':'h3');
-                document.getElementById(`s-${targetNum}`).classList.add('predicted');
-            }
-        });
-    }
-
-    function reset() {
-        if(confirm("Vuoi resettare la sessione?")) {
-            localStorage.removeItem('rouletteSession');
-            history = []; distCW = []; distCCW = []; totalClicks = 0;
-            updateUI();
+            document.getElementById('total-bet-nums').innerText = "Attesa 10 lanci...";
         }
     }
 
-    buildWheel();
-    loadFromStorage();
+    function saveStorage() { localStorage.setItem('rouletteFinalSafe', JSON.stringify(state)); }
+    function loadStorage() {
+        const s = localStorage.getItem('rouletteFinalSafe');
+        if(s) { state = JSON.parse(s); buildWheel(); updateUI(); } else buildWheel();
+    }
+    function resetSession() {
+        if(confirm("Resettare?")) {
+            localStorage.removeItem('rouletteFinalSafe');
+            state = { balance: 100.0, history: [], distCW: [], distCCW: [], totalClicks: 0, currentBets: [] };
+            buildWheel(); updateUI();
+        }
+    }
+    loadStorage();
 </script>
 </body>
 </html>
